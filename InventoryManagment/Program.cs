@@ -79,6 +79,9 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    Console.WriteLine("--> Dev mode, conn string: " + builder.Configuration.GetConnectionString("DefaultConnection"));
+    Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
 }
 else
 {

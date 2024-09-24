@@ -1,0 +1,32 @@
+services:
+  inventorymanagment:
+    image: ${DOCKER_REGISTRY-}inventorymanagment
+    build:
+      context: .
+      dockerfile: InventoryManagment/Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=sqlserverplease;Database=InventoryManagment;User Id=SA;Password=pa55w0rd!;MultipleActiveResultSets=true;
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - sqlserverplease
+
+  sqlserverplease:
+    container_name: sqlserverplease
+    image: mcr.microsoft.com/mssql/server
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=pa55w0rd!
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "sqlcmd -S localhost -U SA -P 'pa55w0rd!' -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  sqlserver-data:

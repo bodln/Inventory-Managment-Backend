@@ -33,7 +33,9 @@ namespace InventoryManagment.Data
             }
             else
             {
-                Console.WriteLine("--> Not in Production mode, so no migrations will be run...");
+                Console.WriteLine("--> Not in Production mode, so no migrations will be run.............");
+                Console.WriteLine("--> But here we go anyway");
+                context.Database.Migrate();
             }
 
             if (!context.Users.Any())
