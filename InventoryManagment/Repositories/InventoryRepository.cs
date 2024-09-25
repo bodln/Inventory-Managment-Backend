@@ -2,7 +2,6 @@
 using InventoryManagment.DTOs;
 using InventoryManagment.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
 
 namespace InventoryManagment.Repositories
 {
@@ -229,10 +228,11 @@ namespace InventoryManagment.Repositories
             if (inventory != null)
             {
                 var histories = _context.LocationHistories.Where(lh => lh.Inventory.GUID == guid);
-                _context.LocationHistories.RemoveRange(histories);
-
-                var inventoryEntity = await _context.Inventories.FirstOrDefaultAsync(it => it.GUID == guid);
-                _context.Inventories.Remove(inventoryEntity);
+                if (histories.Count() != 0)
+                {
+                    _context.LocationHistories.RemoveRange(histories);
+                }
+                _context.Inventories.Remove(inventory);
                 await _context.SaveChangesAsync();
             }
         }

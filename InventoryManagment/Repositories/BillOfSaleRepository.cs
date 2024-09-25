@@ -148,8 +148,42 @@ namespace InventoryManagment.Repositories
                 throw new FileNotFoundException("User not found");
             }
 
-            var item = await _context.Items
-                              .FirstOrDefaultAsync(item => billOfSaleDTO.ItemGUID == item.GUID);
+            var item = await _context.Items.FirstOrDefaultAsync(i => billOfSaleDTO.ItemGUID == i.GUID);
+
+            if (item == null)
+            {
+                throw new FileNotFoundException("Item not found");
+            }
+
+            var inventories = await _context.Inventories
+                                     .Include(inv => inv.Item)
+                                     .Where(inv => inv.Item.GUID == billOfSaleDTO.ItemGUID)
+                                     .OrderBy(inv => inv.AvailableAmount) 
+                                     .ToListAsync();
+
+            int remainingQuantity = billOfSaleDTO.Quantity;
+
+            foreach (var inventory in inventories)
+            {
+                if (remainingQuantity <= 0)
+                    break;
+
+                int reductionAmount = Math.Min(inventory.AvailableAmount, remainingQuantity);
+                inventory.AvailableAmount -= reductionAmount;
+                remainingQuantity -= reductionAmount;
+
+                if (inventory.AvailableAmount <= 0)
+                {
+                    inventory.AvailableAmount = 0;
+                }
+            }
+
+            if (remainingQuantity > 0)
+            {
+                throw new InvalidOperationException("Not enough stock available to fulfill the order.");
+            }
+
+            await _context.SaveChangesAsync();
 
             var billOfSale = new BillOfSale
             {
@@ -200,6 +234,7 @@ namespace InventoryManagment.Repositories
 
             return billOfSaleReturnDTO;
         }
+
 
         public async Task UpdateAsync(Guid GUID, BillOfSaleDTO billOfSaleDTO)
         {

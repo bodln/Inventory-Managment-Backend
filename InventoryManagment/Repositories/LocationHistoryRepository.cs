@@ -1,5 +1,6 @@
 ﻿using InventoryManagment.Data;
 using InventoryManagment.DTOs;
+using InventoryManagment.Migrations;
 using InventoryManagment.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -75,7 +76,8 @@ namespace InventoryManagment.Repositories
                             AvailableAmount = lh.Inventory.AvailableAmount,
                             LastShipment = lh.Inventory.LastShipment
                         },
-                        LocationName = lh.LocationName
+                        LocationName = lh.LocationName,
+                        Quantity = lh.Quantity
                     }
                 );
             }
@@ -137,85 +139,138 @@ namespace InventoryManagment.Repositories
 
         public async Task<LocationHistoryReturnDTO> AddAsync(string token, LocationHistoryDTO locationHistoryDto)
         {
-            JwtSecurityTokenHandler handler = new JwtSecurityTokenHandler();
-            JwtSecurityToken jwtToken = handler.ReadToken(token) as JwtSecurityToken;
-
-            string email = jwtToken.Claims.First(claim => claim.Type == ClaimTypes.Email).Value;
-
-            var warehouseman = await _userManager.FindByEmailAsync(email);
-            if (warehouseman == null)
+            if (locationHistoryDto.Quantity > 0)
             {
-                throw new KeyNotFoundException("Warehouseman not found");
-            }
+                JwtSecurityTokenHandler handler = new JwtSecurityTokenHandler();
+                JwtSecurityToken jwtToken = handler.ReadToken(token) as JwtSecurityToken;
 
-            bool exists = await _context.LocationHistories
-                .AnyAsync(lh => lh.Inventory.GUID == locationHistoryDto.InventoryGUID && lh.LocationName == locationHistoryDto.LocationName);
+                string email = jwtToken.Claims.First(claim => claim.Type == ClaimTypes.Email).Value;
 
-            //if (exists)
-            //{
-            //    throw new InvalidOperationException("A location history entry already exists with the same inventory and location name.");
-            //}
-
-            var inventory = await _context.Inventories
-                .Include(i => i.Item)
-                .FirstOrDefaultAsync(i => i.GUID == locationHistoryDto.InventoryGUID);
-
-            if (inventory == null)
-            {
-                throw new KeyNotFoundException("Inventory not found.");
-            }
-
-            var locationHistory = new LocationHistory
-            {
-                DateOfStoring = DateTime.UtcNow,
-                Warehouseman = warehouseman,
-                Inventory = inventory,
-                LocationName = locationHistoryDto.LocationName
-            };
-
-            _context.LocationHistories.Add(locationHistory);
-            await _context.SaveChangesAsync();
-
-            var roles = warehouseman != null
-                ? await _userManager.GetRolesAsync(warehouseman)
-                : new List<string>();
-
-            ReturnUserDTO returnUserDTO = new ReturnUserDTO
-            {
-                Email = warehouseman.Email,
-                Roles = roles.ToList(),
-                FirstName = warehouseman.FirstName,
-                LastName = warehouseman.LastName,
-                Address = warehouseman.Address,
-                DateOfBirth = warehouseman.DateOfBirth,
-                DateOfHire = warehouseman.DateOfHire,
-                Salary = warehouseman.Salary
-            };
-
-            InventoryReturnDTO inventoryReturnDTO = new InventoryReturnDTO
-            {
-                GUID = locationHistory.Inventory.GUID,
-                Item = new ItemDTO
+                var warehouseman = await _userManager.FindByEmailAsync(email);
+                if (warehouseman == null)
                 {
-                    GUID = locationHistory.Inventory.Item.GUID,
-                    Naziv = locationHistory.Inventory.Item.Naziv,
-                    Weight = locationHistory.Inventory.Item.Weight,
-                    Type = locationHistory.Inventory.Item.Type,
-                    Price = locationHistory.Inventory.Item.Price,
-                    MaxAmount = locationHistory.Inventory.Item.MaxAmount,
-                    MinAmount = locationHistory.Inventory.Item.MinAmount
-                },
-                AvailableAmount = locationHistory.Inventory.AvailableAmount,
-                LastShipment = locationHistory.Inventory.LastShipment
-            };
+                    throw new KeyNotFoundException("Warehouseman not found");
+                }
 
-            return new LocationHistoryReturnDTO
-            {
-                DateOfStoring = locationHistory.DateOfStoring,
-                Warehouseman = returnUserDTO,
-                Inventory = inventoryReturnDTO,
-                LocationName = locationHistory.LocationName
-            };
+                var inventory = await _context.Inventories
+                    .Include(i => i.Item)
+                    .FirstOrDefaultAsync(i => i.GUID == locationHistoryDto.InventoryGUID);
+
+                if (inventory == null)
+                {
+                    throw new KeyNotFoundException("Inventory not found.");
+                }
+
+                if (inventory.AvailableAmount < locationHistoryDto.Quantity)
+                {
+                    locationHistoryDto.Quantity = inventory.AvailableAmount;
+                }
+
+                LocationHistory existing = null;
+
+                try
+                {
+                    existing = await _context.LocationHistories
+                                .Include(lh => lh.Inventory)
+                                .ThenInclude(i => i.Item)
+                                .Where(lh => lh.Inventory.Item.GUID == inventory.Item.GUID && 
+                                lh.LocationName == locationHistoryDto.LocationName && 
+                                lh.Inventory.GUID != inventory.GUID)
+                                .OrderBy(lh => lh.DateOfStoring)
+                                .LastOrDefaultAsync();
+                }
+                catch (Exception ex)
+                {
+
+                    throw new Exception(ex.Message);
+                }
+
+                if (existing != null)
+                {
+                    existing.Inventory.AvailableAmount += locationHistoryDto.Quantity;
+                    var locationHistoryExists = new LocationHistory
+                    {
+                        DateOfStoring = DateTime.UtcNow,
+                        Warehouseman = warehouseman,
+                        Inventory = existing.Inventory,
+                        LocationName = locationHistoryDto.LocationName,
+                        Quantity = -locationHistoryDto.Quantity
+                    };
+
+                    _context.LocationHistories.Add(locationHistoryExists);
+                    await _context.SaveChangesAsync();
+                }
+
+                inventory.AvailableAmount -= locationHistoryDto.Quantity;
+
+                Inventory newInv = null;
+                if (existing == null)
+                {
+                    newInv = new Inventory
+                    {
+                        Item = inventory.Item,
+                        AvailableAmount = locationHistoryDto.Quantity,
+                        LastShipment = DateTime.UtcNow
+                    };
+
+                    await _context.Inventories.AddAsync(newInv);
+                }
+
+                var locationHistory = new LocationHistory
+                {
+                    DateOfStoring = DateTime.UtcNow,
+                    Warehouseman = warehouseman,
+                    Inventory = existing==null ? newInv : existing.Inventory,
+                    LocationName = locationHistoryDto.LocationName,
+                    Quantity = locationHistoryDto.Quantity
+                };
+
+                _context.LocationHistories.Add(locationHistory);
+                await _context.SaveChangesAsync();
+
+                var roles = warehouseman != null
+                    ? await _userManager.GetRolesAsync(warehouseman)
+                    : new List<string>();
+
+                ReturnUserDTO returnUserDTO = new ReturnUserDTO
+                {
+                    Email = warehouseman.Email,
+                    Roles = roles.ToList(),
+                    FirstName = warehouseman.FirstName,
+                    LastName = warehouseman.LastName,
+                    Address = warehouseman.Address,
+                    DateOfBirth = warehouseman.DateOfBirth,
+                    DateOfHire = warehouseman.DateOfHire,
+                    Salary = warehouseman.Salary
+                };
+
+                InventoryReturnDTO inventoryReturnDTO = new InventoryReturnDTO
+                {
+                    GUID = locationHistory.Inventory.GUID,
+                    Item = new ItemDTO
+                    {
+                        GUID = locationHistory.Inventory.Item.GUID,
+                        Naziv = locationHistory.Inventory.Item.Naziv,
+                        Weight = locationHistory.Inventory.Item.Weight,
+                        Type = locationHistory.Inventory.Item.Type,
+                        Price = locationHistory.Inventory.Item.Price,
+                        MaxAmount = locationHistory.Inventory.Item.MaxAmount,
+                        MinAmount = locationHistory.Inventory.Item.MinAmount
+                    },
+                    AvailableAmount = locationHistory.Inventory.AvailableAmount,
+                    LastShipment = locationHistory.Inventory.LastShipment
+                };
+
+                return new LocationHistoryReturnDTO
+                {
+                    DateOfStoring = locationHistory.DateOfStoring,
+                    Warehouseman = returnUserDTO,
+                    Inventory = inventoryReturnDTO,
+                    LocationName = locationHistory.LocationName
+                }; 
+            }
+
+            throw new FormatException("Invalid transfer amount.");
         }
 
 

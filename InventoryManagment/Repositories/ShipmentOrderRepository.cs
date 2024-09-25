@@ -334,20 +334,23 @@ namespace InventoryManagment.Repositories
             }
 
             var existingInventoryLocation = await _context.LocationHistories
-                .Where(lh => lh.Inventory.Item.GUID == item.GUID && lh.LocationName == conclusion.Location)
-                .Include(lh => lh.Inventory) 
+                .Include(lh => lh.Inventory)
+                .ThenInclude(inv => inv.Item)
+                .Where(lh => lh.Inventory.Item == item && lh.LocationName == conclusion.Location)
                 .FirstOrDefaultAsync();
 
             if (existingInventoryLocation != null)
             {
                 existingInventoryLocation.Inventory.AvailableAmount += shipmentOrder.Quantity;
                 existingInventoryLocation.Inventory.LastShipment = DateTime.UtcNow;
+                existingInventoryLocation.Inventory.AvailableAmount += shipmentOrder.Quantity;
 
                 var locationHistory = new LocationHistory
                 {
                     Inventory = existingInventoryLocation.Inventory,
                     LocationName = conclusion.Location,
-                    Warehouseman = warehouseman, 
+                    Warehouseman = warehouseman,
+                    Quantity = shipmentOrder.Quantity
                 };
 
                 _context.LocationHistories.Add(locationHistory);
@@ -367,7 +370,8 @@ namespace InventoryManagment.Repositories
                 {
                     Inventory = newInventory,
                     LocationName = conclusion.Location,
-                    Warehouseman = shipmentOrder.Manager, 
+                    Warehouseman = shipmentOrder.Manager,
+                    Quantity = shipmentOrder.Quantity
                 };
 
                 _context.LocationHistories.Add(locationHistory);

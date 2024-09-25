@@ -123,12 +123,13 @@ namespace InventoryManagment.Repositories
                 .ToListAsync();
 
             var unitsSold = billsOfSale.Sum(b => b.Quantity);
-            var totalProfit = billsOfSale.Sum(b => b.Quantity * (b.Item.Price - item.Price));
+            var totalProfit = billsOfSale.Sum(b => b.Quantity * b.Item.Price);
 
             var locationHistories = await _context.LocationHistories
                 .Where(lh => lh.Inventory.Item.GUID == itemGuid)
                 .Include(lh => lh.Warehouseman)  
-                .Include(lh => lh.Inventory)     
+                .Include(lh => lh.Inventory)
+                .ThenInclude(inv => inv.Item)
                 .ToListAsync();
 
             List<LocationHistoryReturnDTO> locationHistoryDTOs = new List<LocationHistoryReturnDTO>();
@@ -158,7 +159,8 @@ namespace InventoryManagment.Repositories
                         AvailableAmount = lh.Inventory.AvailableAmount,
                         LastShipment = lh.Inventory.LastShipment
                     },
-                    LocationName = lh.LocationName
+                    LocationName = lh.LocationName,
+                    Quantity = lh.Quantity
                 };
 
                 locationHistoryDTOs.Add(locationHistoryDTO);
@@ -198,7 +200,7 @@ namespace InventoryManagment.Repositories
                 .ToListAsync();
 
                 var unitsSold = billsOfSale.Sum(b => b.Quantity);
-                var totalProfit = billsOfSale.Sum(b => b.Quantity * (b.Item.Price - item.Price));
+                var totalProfit = billsOfSale.Sum(b => b.Quantity * b.Item.Price);
 
                 var locationHistories = await _context.LocationHistories
                     .Where(lh => lh.Inventory.Item.GUID == item.GUID)
@@ -234,7 +236,8 @@ namespace InventoryManagment.Repositories
                             AvailableAmount = lh.Inventory.AvailableAmount,
                             LastShipment = lh.Inventory.LastShipment
                         },
-                        LocationName = lh.LocationName
+                        LocationName = lh.LocationName,
+                        Quantity = lh.Quantity
                     };
 
                     locationHistoryDTOs.Add(locationHistoryDTO);

@@ -8,5 +8,6 @@
         public User Warehouseman { get; set; }
         public Inventory Inventory { get; set; }
         public string LocationName { get; set; }
+        public int Quantity { get; set; } = 0;
     }
 }
