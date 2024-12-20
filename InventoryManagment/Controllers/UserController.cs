@@ -26,7 +26,7 @@ namespace InventoryManagment.Controllers
             return Ok(response);
         }
 
-        [HttpPost("LogIn")]
+        [HttpPost("LogIns")]
         public async Task<IActionResult> Login(LoginDTO loginDTO)
         {
             var response = await _userAccount.LoginAccount(loginDTO);
@@ -40,6 +40,12 @@ namespace InventoryManagment.Controllers
             return Ok(response);
         }
 
+        [HttpPost("RemoveUser"), Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RemovelUser([FromBody] string email)
+        {
+            var response = await _userAccount.RemoveUser(email);
+            return Ok(response);
+        }
 
         [HttpDelete("RemoveAllUsers"), Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveAllUsers()
@@ -67,6 +73,13 @@ namespace InventoryManagment.Controllers
         {
             var response = await _userAccount.RemoveRole(email, roleName);
             return Ok(response);
+        }
+
+        [HttpPut(), Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Edit(ReturnUserDTO request)
+        {
+            var response = await _userAccount.Edit(request);
+            return Ok();
         }
     }
 }

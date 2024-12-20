@@ -16,7 +16,9 @@ namespace InventoryManagment.Repositories
         Task<MessageReturnDTO> CreateAccount(UserDTO userDTO);
         Task<AuthDTO> LoginAccount(LoginDTO loginDTO);
         Task<List<ReturnUserDTO>> GetAll();
+        Task<MessageReturnDTO> Edit(ReturnUserDTO userDTO);
         Task<MessageReturnDTO> RemoveAllUsers();
+        Task<MessageReturnDTO> RemoveUser(string email);
         Task<MessageReturnDTO> RemoveAllRoles();
         Task<MessageReturnDTO> AddRole(string email, string roleName);
         Task<MessageReturnDTO> RemoveRole(string email, string roleName);
@@ -107,12 +109,19 @@ namespace InventoryManagment.Repositories
 
             bool checkUserPasswords = await _userManager.CheckPasswordAsync(getUser, loginDTO.Password);
             if (!checkUserPasswords)
+            {
                 authDTO.token = "Invalid email/password";
+                authDTO.code = 401;
+            }
+            else
+            {
+                var getUserRoles = await _userManager.GetRolesAsync(getUser);
+                var userSession = new UserSession(getUser.Email, getUserRoles.ToList());
+                string token = GenerateToken(userSession);
+                authDTO.token = token;
+                authDTO.code = 200;
+            }
 
-            var getUserRoles = await _userManager.GetRolesAsync(getUser);
-            var userSession = new UserSession(getUser.Email, getUserRoles.ToList());
-            string token = GenerateToken(userSession);
-            authDTO.token = token;
             return authDTO;
         }
 
@@ -127,7 +136,13 @@ namespace InventoryManagment.Repositories
                 var returnUser = new ReturnUserDTO
                 {
                     Email = user.Email,
-                    Roles = roles.ToList()
+                    Roles = roles.ToList(),
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Address = user.Address,
+                    DateOfBirth = user.DateOfBirth,
+                    DateOfHire = user.DateOfHire,
+                    Salary = user.Salary
                 };
                 returnUsers.Add(returnUser);
             }
@@ -135,6 +150,17 @@ namespace InventoryManagment.Repositories
             return returnUsers;
         }
 
+        public async Task<MessageReturnDTO> RemoveUser(string email)
+        {
+            MessageReturnDTO message = new MessageReturnDTO();
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null) message.Message = "User not found.";
+
+            var result = await _userManager.DeleteAsync(user);
+            message.Message = result.Succeeded ? $"{email} user deleted successfully." : $"Failed to delete {email} user.";
+
+            return message;
+        }
 
         public async Task<MessageReturnDTO> RemoveAllUsers()
         {
@@ -229,6 +255,55 @@ namespace InventoryManagment.Repositories
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public async Task<MessageReturnDTO> Edit(ReturnUserDTO userDTO)
+        {
+            MessageReturnDTO message = new MessageReturnDTO();
+            List<string> roles = new List<string>
+            {
+                "Admin",
+                "Manager",
+                "Warehouseman"
+            };
+
+            message.Message = "Edit successful.";
+
+            try
+            {
+                User user = await _userManager.FindByEmailAsync(userDTO.Email);
+
+                user.Email = userDTO.Email;
+                user.FirstName = userDTO.FirstName;
+                user.LastName = userDTO.LastName;
+                user.Salary = userDTO.Salary;
+                user.Address = userDTO.Address;
+
+                foreach (string role in roles)
+                {
+                    if (userDTO.Roles.Contains(role))
+                    {
+                        if (!await _userManager.IsInRoleAsync(user, role))
+                        {
+                            await _userManager.AddToRoleAsync(user, role);
+                        }
+                    }
+                    else
+                    {
+                        if (await _userManager.IsInRoleAsync(user, role))
+                        {
+                            await _userManager.RemoveFromRoleAsync(user, role);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                message.Message = "Failed to edit user info. Message: " + ex.Message;
+            }
+
+
+            return message;
         }
     }
     public record UserSession(string Email, List<string> Roles);
