@@ -9,7 +9,7 @@ namespace InventoryManagment.DTOs
         public int Quantity { get; set; }
         public ReturnUserDTO Manager { get; set; }
         public DateTime DateOfCreation { get; set; }
-        public DateTime DateOfArrival { get; set; }
+        public DateTime? DateOfArrival { get; set; }
         public float Price { get; set; }
         public bool Unloaded { get; set; } = false;
     }

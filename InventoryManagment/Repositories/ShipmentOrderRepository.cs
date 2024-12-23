@@ -18,6 +18,7 @@ namespace InventoryManagment.Repositories
         Task DeleteAsync(Guid guid);
         Task<ShipmentOrderReturnDTO> GetByDTOGuidAsync(Guid guid);
         Task<List<ShipmentOrderReturnDTO>> GetByItemGuidAsync(Guid itemGUID);
+        Task Arrive(Guid guid);
         Task Conclude(Guid GUID, ConcludeOrderDTO conclusion, string token);
     }
 
@@ -165,6 +166,7 @@ namespace InventoryManagment.Repositories
             {
                 GUID = Guid.NewGuid(),
                 DateOfCreation = DateTime.UtcNow,
+                DateOfArrival = null,
                 Price = shipmentOrderDTO.Price,
                 Manager = manager,
                 Item = await _context.Items.FirstOrDefaultAsync(it => it.GUID == shipmentOrderDTO.ItemGUID),
@@ -283,6 +285,7 @@ namespace InventoryManagment.Repositories
             existingOrder.Item = await _context.Items.FirstOrDefaultAsync(it => it.GUID == shipmentOrderDTO.ItemGUID);
             
             existingOrder.DateOfCreation = shipmentOrderDTO.DateOfCreation;
+            existingOrder.DateOfArrival = shipmentOrderDTO.DateOfArrival;
             existingOrder.Price = shipmentOrderDTO.Price;
             existingOrder.Unloaded = shipmentOrderDTO.Unloaded;
             existingOrder.Quantity = shipmentOrderDTO.Quantity;
@@ -298,6 +301,22 @@ namespace InventoryManagment.Repositories
             {
                 _context.ShipmentOrders.Remove(shipmentOrder);
                 await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task Arrive(Guid guid)
+        {
+            var existingOrder = await GetByGuidAsync(guid);
+            if (existingOrder == null)
+            {
+                throw new KeyNotFoundException("Shipment order not found");
+            }
+            if (existingOrder.DateOfArrival == null)
+            {
+                existingOrder.DateOfArrival = DateTime.UtcNow;
+
+                _context.ShipmentOrders.Update(existingOrder);
+                await _context.SaveChangesAsync(); 
             }
         }
 

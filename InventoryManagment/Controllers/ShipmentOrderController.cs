@@ -53,6 +53,13 @@ namespace InventoryManagment.Controllers
             return Ok();
         }
 
+        [HttpPut("Arrive/{GUID:Guid}")]
+        public async Task<IActionResult> Arrive(Guid GUID)
+        {
+            await _repository.Arrive(GUID);
+            return Ok();
+        }
+
         [HttpPut("Conclude/{GUID:Guid}")]
         public async Task<IActionResult> Conclude(Guid GUID, ConcludeOrderDTO conclusion)
         {

@@ -10,7 +10,7 @@ namespace InventoryManagment.Models
         public int Quantity { get; set; }
         public User Manager { get; set; }
         public DateTime DateOfCreation { get; set; }
-        public DateTime DateOfArrival { get; set; }
+        public DateTime? DateOfArrival { get; set; }
         public float Price { get; set; }
         public bool Unloaded { get; set; } = false;
     }
