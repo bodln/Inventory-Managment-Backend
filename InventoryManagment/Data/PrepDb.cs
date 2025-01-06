@@ -46,7 +46,7 @@ namespace InventoryManagment.Data
                 {
                     Id = Guid.NewGuid().ToString(), 
                     Name = "Omer",
-                    Email = "omer@example.com",
+                    Email = "omer@gmail.com",
                     Password = "Omer@123",  
                     ConfirmPassword = "Omer@123", 
                     FirstName = "Omer",

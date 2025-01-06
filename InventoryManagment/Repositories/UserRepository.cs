@@ -296,6 +296,8 @@ namespace InventoryManagment.Repositories
                         }
                     }
                 }
+
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
