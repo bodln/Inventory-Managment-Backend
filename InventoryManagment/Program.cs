@@ -17,6 +17,10 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
+// AddScoped One instance per HTTP request and then all classes share,
+// AddSingleton One instance for the entire application all requests,
+// AddTransient A new instance every time it's requested, every class gets its own.
+
 builder.Services.AddScoped<IUserAccount, UserRepository>();
 builder.Services.AddScoped<IBillOfSaleRepository, BillOfSaleRepository>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
@@ -53,6 +57,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// This makes it possible to test the API with Swagger and include the JWT token in the header for authenticated endpoints.
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
@@ -91,8 +96,16 @@ else
 
 app.UseHttpsRedirection();
 
+// Validates JWT from request header.
+// If valid, sets HttpContext.User.
+// Does not block access by itself.
+// This must be before UseAuthorization, otherwise the user won't be authenticated and will get 401 Unauthorized when trying to access protected endpoints.
 app.UseAuthentication();
 
+// Checks [Authorize] attributes on endpoints.
+// Uses HttpContext.User.
+// Returns 401/403 if requirements are not met.
+// This must be after UseAuthentication, otherwise the user won't be authenticated and will get 401 Unauthorized when trying to access protected endpoints.
 app.UseAuthorization();
 
 app.MapControllers();

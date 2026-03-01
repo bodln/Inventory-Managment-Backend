@@ -39,6 +39,7 @@ namespace InventoryManagment.Data
             }
 
             if (!context.Users.Any())
+
             {
                 Console.WriteLine("--> No users found, creating default user...");
 
