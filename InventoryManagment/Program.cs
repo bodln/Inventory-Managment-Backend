@@ -70,6 +70,7 @@ builder.Services.AddSwaggerGen(options =>
     options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
 
+// This might be needed to prevent circular reference issues when serializing entities with navigation properties (i did it for swagger displaying of nested objects).
 //builder.Services.AddControllers()
 //    .AddJsonOptions(options =>
 //    {
