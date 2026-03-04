@@ -73,6 +73,7 @@ namespace InventoryManagment.Repositories
                 return message;
             }
 
+            // The first time the application is run, it will create the roles and assign them to the first user. After that, only the "Warehouseman" role will be assigned to new users by default.
             var checkAdmin = await _roleManager.FindByNameAsync("Admin");
             if (checkAdmin is null)
             {

@@ -44,11 +44,11 @@ namespace InventoryManagment.Repositories
                     },
                     AvailableAmount = i.AvailableAmount,
                     LastShipment = i.LastShipment,
-                    CurrentLocationName = _context.LocationHistories            // <--------------------
-                        .Where(lh => lh.Inventory.GUID == i.GUID)               // <--------------------
-                        .OrderByDescending(lh => lh.DateOfStoring)              // <--------------------
-                        .Select(lh => lh.LocationName)                          // <--------------------
-                        .FirstOrDefault()                                       // <--------------------
+                    CurrentLocationName = _context.LocationHistories            
+                        .Where(lh => lh.Inventory.GUID == i.GUID)               
+                        .OrderByDescending(lh => lh.DateOfStoring)              
+                        .Select(lh => lh.LocationName)                          
+                        .FirstOrDefault()                                       
                 })
                 .ToListAsync();
         }
@@ -79,11 +79,11 @@ namespace InventoryManagment.Repositories
                 },
                 AvailableAmount = inventory.AvailableAmount,
                 LastShipment = inventory.LastShipment,
-                CurrentLocationName = await _context.LocationHistories           // <--------------------
-                    .Where(lh => lh.Inventory.GUID == inventory.GUID)            // <--------------------
-                    .OrderByDescending(lh => lh.DateOfStoring)                   // <--------------------
-                    .Select(lh => lh.LocationName)                               // <--------------------
-                    .FirstOrDefaultAsync()                                       // <--------------------
+                CurrentLocationName = await _context.LocationHistories           
+                    .Where(lh => lh.Inventory.GUID == inventory.GUID)            -
+                    .OrderByDescending(lh => lh.DateOfStoring)                   
+                    .Select(lh => lh.LocationName)                               
+                    .FirstOrDefaultAsync()                                       
             };
         }
 
@@ -114,11 +114,11 @@ namespace InventoryManagment.Repositories
                 },
                 AvailableAmount = inventory.AvailableAmount,
                 LastShipment = inventory.LastShipment,
-                CurrentLocationName = await _context.LocationHistories           // <--------------------
-                    .Where(lh => lh.Inventory.GUID == inventory.GUID)            // <--------------------
-                    .OrderByDescending(lh => lh.DateOfStoring)                   // <--------------------
-                    .Select(lh => lh.LocationName)                               // <--------------------
-                    .FirstOrDefaultAsync()                                       // <--------------------
+                CurrentLocationName = await _context.LocationHistories           
+                    .Where(lh => lh.Inventory.GUID == inventory.GUID)            
+                    .OrderByDescending(lh => lh.DateOfStoring)                  
+                    .Select(lh => lh.LocationName)                              
+                    .FirstOrDefaultAsync()                                      
             };
         }
 
